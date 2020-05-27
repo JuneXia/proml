@@ -1,0 +1,39 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558 
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "options": {
+        //"cwd": "/usr/bin"
+        "cwd": "${workspaceRoot}/build"
+    },
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "cmake",
+            //"command": "/usr/bin/g++",
+            //"args": [
+            //    "-g",
+            //    "${file}",
+            //    "-o",
+            //    "${fileDirname}/${fileBasenameNoExtension}"
+            //],
+            "command": "cmake",
+            "args": [
+                "-G",
+                "Unix Makefiles",
+                "-DCMAKE_BUILD_TYPE=Debug",
+                ".."
+            ]
+        },
+        {
+            "label": "make",/////////////////////// 下面的make就是这里
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "type": "shell",
+            "command": "make",
+            "args": []
+        }
+    ]
+}
