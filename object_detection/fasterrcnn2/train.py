@@ -136,10 +136,23 @@ if __name__ == "__main__":
     train_set = datasets.VOC2007Dataset(vocfile=train_dir, transforms=train_transform)
 
     train_loader = DataLoader(train_set, batch_size=batch_size, collate_fn=collate_fn)
-    anchors_gen = Anchors.AnchorsGenerator()
+
+    base_size = 16
+    ratios = [0.5, 1, 2]
+    anchor_scales = [8, 16, 32]
+    anchors_gen = Anchors.AnchorTargetCreator()
+    anchor_base = Anchors.generate_anchor_base(base_size=base_size, anchor_scales=anchor_scales, ratios=ratios)
+
+
+
+
+
+
+
+
 
     net = mobilenet_v2(num_classes=2, width_mult=0.35, inverted_residual_setting=None, round_nearest=8).to(device)
-    rpn_net = RPN(1280, 512, 9)
+    rpn_net = RPN(1280, 512, 9).to(device)
 
     # inputs = torch.zeros((2, 3, 128, 128))
     # cls = net(inputs)
@@ -164,9 +177,24 @@ if __name__ == "__main__":
         targets = targets_
 
         feature_map = net.features(images)
+
+
+
+        # 提取特征图宽高
+        feature_width = feature_map.shape[2]
+        feature_height = feature_map.shape[3]
+
+        # 计算在特征图上滑动anchor_base时的跨度
+        # 一副图片经过backbone后得到的是多次下采样后的特征图，anchor框是指在输入图片上的anchor框.
+        # 而要想在输入图片上均匀生成等间距的anchor_base，则需要有一个合理的anchor_base间隔，也就是下面即将要计算的feature_stride
+        remainder = 1 if image_size[0] % feature_width > 0 else 0
+        feature_stride = image_size[0] // feature_width + remainder
+
+        anchor = Anchors.enumerate_shifted_anchor(np.array(anchor_base), feature_stride, feature_height, feature_width)
+
         rpn_class, rpn_prob, rpn_bbox = rpn_net(feature_map)
 
-        anchors_gen()
+        anchors_gen(target['boxes'], anchor, img_size)
 
         classify_loss(rpn_class, targets['label'])
 
