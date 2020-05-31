@@ -7,26 +7,21 @@ train_val_flag       图片路径                                               
 import os
 import random
 import xml.etree.ElementTree as ET
-from libml.utils import tools
 
 sets = [('2007', 'train'), ('2007', 'val'), ('2007', 'test')]
 
 classes = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 
 
-def convert_annotation(voc_path, voc_year, xml_name, xml_file):
+def convert_annotation(voc_path, voc_year, xml_name, xml_file, file_handle):
     in_file = open(xml_file)
     tree = ET.parse(in_file)
     root = tree.getroot()
     if root.find('object') == None:
-        return '', []
+        return
 
-    # image_path = os.path.join(voc_path, 'VOC%s/JPEGImages' % (voc_year), '%s.jpg' % (xml_name))
-    image_path = os.path.join(voc_path, 'JPEGImages', '%s.jpg' % (xml_name))
-    if not os.path.exists(image_path):
-        return '', []
-    image_path = os.path.join('JPEGImages', '%s.jpg' % (xml_name))
-    bboxes_id = list()
+    image_path = os.path.join(voc_path, 'VOC%s/JPEGImages' % (voc_year), '%s.jpg' % (xml_name))
+    file_handle.write(image_path)
     for obj in root.iter('object'):
         difficult = obj.find('difficult').text
         cls = obj.find('name').text
@@ -36,16 +31,16 @@ def convert_annotation(voc_path, voc_year, xml_name, xml_file):
         xmlbox = obj.find('bndbox')
         b = (int(xmlbox.find('xmin').text), int(xmlbox.find('ymin').text), int(xmlbox.find('xmax').text),
              int(xmlbox.find('ymax').text))
-        bboxes_id.append(b + (cls_id, ))
+        file_handle.write(" " + ",".join([str(a) for a in b]) + ',' + str(cls_id))
 
-    return image_path, bboxes_id
+    file_handle.write('\n')
 
 
 def xml_parse(voc_path, voc_year=2007, val_ratio=0.1, save_path='./', train_test_flag='train'):
     assert val_ratio >= 0
     assert train_test_flag in ['train', 'test']
 
-    annotations = os.path.join(voc_path, 'Annotations')
+    annotations = os.path.join(voc_path, 'VOC%s'%(voc_year), 'Annotations')
     temp_xml = os.listdir(annotations)
     random.shuffle(temp_xml)
     total_xml = []
@@ -57,13 +52,7 @@ def xml_parse(voc_path, voc_year=2007, val_ratio=0.1, save_path='./', train_test
         for name in xml_list:
             xml_name = name.split('.')[0]
             xml_file = os.path.join(annotations, name)
-            image_path, bboxes_id = convert_annotation(voc_path, voc_year, xml_name, xml_file)
-
-            if len(bboxes_id) > 0:
-                text = image_path + ' '
-                for boxid in bboxes_id:
-                    text = text + tools.strcat(boxid) + ' '
-                file_save_handle.write(text.strip() + '\n')
+            convert_annotation(voc_path, voc_year, xml_name, xml_file, file_save_handle)
 
     val_size = int(val_ratio * len(total_xml))
 
@@ -93,11 +82,3 @@ if __name__ == '__main__1':  # ubuntu
     xml_path = "/home/xiajun/res/VOC/VOCtrainval2007/VOCdevkit/"
     save_path = "/home/xiajun/dev/proml/object_detection/fasterrcnn2/VOCdevkit"
     xml_parse(xml_path, val_ratio=0.1, save_path=save_path, train_test_flag='train')
-
-
-if __name__ == '__main__':
-    from object_detection.fasterrcnn2.utils.config import cfg_net
-
-    xml_path = cfg_net['data_path']
-    save_path = cfg_net['train_data_path']
-    xml_parse(xml_path, voc_year=2007, val_ratio=0.1, save_path=save_path, train_test_flag='train')

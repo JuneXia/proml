@@ -203,10 +203,37 @@ def generate_anchor_base(base_size=16, ratios=[0.5, 1, 2], anchor_scales=[8, 16,
     return anchor_base
 
 
-def enumerate_shifted_anchor(anchor_base, feat_stride, height, width):
+def enumerate_shifted_anchor_1(anchor_base, feat_stride, height, width):
+    raise Exception('已废弃！推荐使用 enumerate_shifted_anchor')
     # 计算网格中心点
     shift_x = np.arange(0, width * feat_stride, feat_stride)
     shift_y = np.arange(0, height * feat_stride, feat_stride)
+    shift_x, shift_y = np.meshgrid(shift_x, shift_y)
+    shift = np.stack((shift_x.ravel(),shift_y.ravel(),
+                      shift_x.ravel(),shift_y.ravel(),), axis=1)
+    # shift 是一个 (N × 4) 的数组，而实际上(:, 0:2)和(:, 2:4)是相等的，这样做是为了下面计算的方便。
+
+    # 每个网格点上的9个先验框
+    A = anchor_base.shape[0]
+    K = shift.shape[0]
+    anchor = anchor_base.reshape((1, A, 4)) + \
+             shift.reshape((K, 1, 4))
+    # 所有的先验框
+    anchor = anchor.reshape((K * A, 4)).astype(np.float32)
+    return anchor
+
+
+def enumerate_shifted_anchor(anchor_base, feature_size, feature_stride):
+    """
+    :anchor_base: generate by generate_anchor_base.
+    :feature_size: type(feature_size) == tuple, len(feature_size) == 2,
+                   feature_size[0] == feature_height, feature_size[1] == feature_width
+    :feature_stride: type(feature_stride) == tuple, len(feature_stride) == 2,
+                   feature_stride[0] == feature_height_stride, feature_stride[1] == feature_width_stride
+    """
+    # 计算网格中心点
+    shift_x = np.arange(0, feature_size[1] * feature_stride[1], feature_stride[1])
+    shift_y = np.arange(0, feature_size[0] * feature_stride[0], feature_stride[0])
     shift_x, shift_y = np.meshgrid(shift_x, shift_y)
     shift = np.stack((shift_x.ravel(),shift_y.ravel(),
                       shift_x.ravel(),shift_y.ravel(),), axis=1)

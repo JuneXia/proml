@@ -138,7 +138,7 @@ class ShapeData():
 
 
 class VOC2007Dataset(Dataset):
-    def __init__(self, vocfile, transforms):
+    def __init__(self, data_root, vocfile, transforms):
 
         self.vocfile = vocfile
         self.transforms = transforms
@@ -146,9 +146,9 @@ class VOC2007Dataset(Dataset):
         # self.txt_dir = os.path.join(data_dir, "Annotation")
         # self.names = [name[:-4] for name in list(filter(lambda x: x.endswith(".png"), os.listdir(self.img_dir)))]
 
-        self.images_path, self.images_label = self.load_data(self.vocfile)
+        self.images_path, self.images_label = self.load_data(data_root, self.vocfile)
 
-    def load_data(self, vocfile):
+    def load_data(self, data_root, vocfile):
         with open(vocfile, 'r') as f:
             lines = f.readlines()
 
@@ -156,7 +156,8 @@ class VOC2007Dataset(Dataset):
         images_label = list()
         for line in lines:
             image_info = line.strip().split(' ')
-            images_path.append(image_info[0])
+            image_path = os.path.join(data_root, image_info[0])
+            images_path.append(image_path)
             image_label = [iminfo.split(',') for iminfo in image_info[1:]]
             image_label = np.array(image_label).astype(np.int32)
             images_label.append(image_label)

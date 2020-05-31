@@ -15,11 +15,15 @@ from matplotlib import pyplot as plt
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.transforms import functional as F
 from torchvision.models.mobilenet import mobilenet_v2
+
+from libml.utils.config import SysConfig
+
 from nets.rpn import RegionProposalNetwork as RPN
 
 from datasets import datasets
 from losses import rpn_loss
 from utils import anchors as Anchors
+from utils.config import cfg_net
 
 set_seed(1)  # 设置随机种子
 
@@ -127,13 +131,14 @@ def collate_fn(batch):
 if __name__ == "__main__":
     LR = 0.001
     num_classes = 2
-    batch_size = 2
+    batch_size = 1
     start_epoch, max_epoch = 0, 30
-    train_dir = "/home/xiajun/dev/proml/object_detection/fasterrcnn2/VOCdevkit/VOC2007_train.txt"
+    data_root = cfg_net['data_path']
+    train_file = os.path.join(cfg_net['train_data_path'], "VOC2007_train.txt")
     train_transform = Compose([ToTensor(), RandomHorizontalFlip(0.5)])
 
     # step 1: data
-    train_set = datasets.VOC2007Dataset(vocfile=train_dir, transforms=train_transform)
+    train_set = datasets.VOC2007Dataset(data_root, vocfile=train_file, transforms=train_transform)
 
     train_loader = DataLoader(train_set, batch_size=batch_size, collate_fn=collate_fn)
 
@@ -142,13 +147,6 @@ if __name__ == "__main__":
     anchor_scales = [8, 16, 32]
     anchors_gen = Anchors.AnchorTargetCreator()
     anchor_base = Anchors.generate_anchor_base(base_size=base_size, anchor_scales=anchor_scales, ratios=ratios)
-
-
-
-
-
-
-
 
 
     net = mobilenet_v2(num_classes=2, width_mult=0.35, inverted_residual_setting=None, round_nearest=8).to(device)
@@ -163,6 +161,7 @@ if __name__ == "__main__":
 
     for data in train_loader:
         images, targets = data
+        images_size = list(images.shape[2:])
         images = images.to(device)
 
         targets_ = list()
@@ -178,8 +177,8 @@ if __name__ == "__main__":
 
         feature_map = net.features(images)
 
-
-
+        # 生成整幅图片上的anchor
+        # ============================================================================
         # 提取特征图宽高
         feature_width = feature_map.shape[2]
         feature_height = feature_map.shape[3]
@@ -187,16 +186,25 @@ if __name__ == "__main__":
         # 计算在特征图上滑动anchor_base时的跨度
         # 一副图片经过backbone后得到的是多次下采样后的特征图，anchor框是指在输入图片上的anchor框.
         # 而要想在输入图片上均匀生成等间距的anchor_base，则需要有一个合理的anchor_base间隔，也就是下面即将要计算的feature_stride
-        remainder = 1 if image_size[0] % feature_width > 0 else 0
-        feature_stride = image_size[0] // feature_width + remainder
+        remainder = 1 if images_size[0] % feature_width > 0 else 0
+        feature_width_stride = images_size[0] // feature_width + remainder
 
-        anchor = Anchors.enumerate_shifted_anchor(np.array(anchor_base), feature_stride, feature_height, feature_width)
+        remainder = 1 if images_size[1] % feature_height > 0 else 0
+        feature_height_stride = images_size[1] // feature_height + remainder
+        feature_stride = (feature_height_stride, feature_width_stride)
+
+        feature_size = (feature_height, feature_width)
+
+        anchor = Anchors.enumerate_shifted_anchor(np.array(anchor_base), feature_size, feature_stride)
+        # ============================================================================
 
         rpn_class, rpn_prob, rpn_bbox = rpn_net(feature_map)
 
-        anchors_gen(target['boxes'], anchor, img_size)
+        # TODO: 注意这里的 targets[0] 是因为 batch_size = 1
+        loc, label = anchors_gen(targets[0]['boxes'].numpy(), anchor, images_size)
 
-        classify_loss(rpn_class, targets['label'])
+        # >>>>>>>
+        classify_loss(rpn_class, targets[0]['labels'])
 
 
         classify_loss()
