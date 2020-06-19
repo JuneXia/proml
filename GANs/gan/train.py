@@ -9,8 +9,10 @@ from torchvision.utils import save_image
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from torch.autograd import Variable
-from GANs.gan.model import Generator
-from GANs.gan.model import Discriminator
+# from GANs.gan.model import Generator
+# from GANs.gan.model import Discriminator
+from model import Generator
+from model import Discriminator
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -128,14 +130,3 @@ for epoch in range(opt.n_epochs):
 
 
 
-
-
-
-
-
-
-
-D_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_logit_real, labels=tf.ones_like(D_logit_real))) #对判别器对真实样本的判别结果计算误差(将结果与1比较)
-D_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_logit_fake, labels=tf.zeros_like(D_logit_fake))) #对判别器对虚假样本(即生成器生成的手写数字)的判别结果计算误差(将结果与0比较)
-D_loss = D_loss_real + D_loss_fake #判别器的误差
-G_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_logit_fake, labels=tf.ones_like(D_logit_fake))) #生成器的误差(将判别器返回的对虚假样本的判别结果与1比较)
