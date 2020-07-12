@@ -8,7 +8,8 @@ SysConfig = {
     "proml_path": "dev/proml"
 }
 
-if SysConfig['host_name'] in ['xjhomewin', 'DESKTOP-G2VDM3M']:
+if SysConfig['host_name'] in ['SC-202002221016',  # xiaj home win-pc
+                              'DESKTOP-G2VDM3M']:
     SysConfig['home_path'] = os.environ['HOMEPATH']
 elif SysConfig['host_name'] in ['mt1080', 'ps']:
     SysConfig['home_path'] = os.environ['HOME']
