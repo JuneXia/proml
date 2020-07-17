@@ -10,6 +10,8 @@ import matplotlib.patches as mpatches
 # from sklearn.metrics import roc_curve, auc
 import shutil
 import datetime
+import random
+
 
 DEBUG = False
 
@@ -83,8 +85,10 @@ def steps_per_epoch(num_samples, batch_size, allow_less_batsize=True):
     return steps
 
 
-def get_strtime():
-    time_str = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+def get_strtime(rand_suffix=True):
+    time_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    if rand_suffix:
+        time_str += str(random.randint(10000, 99999))
 
     return time_str
 
