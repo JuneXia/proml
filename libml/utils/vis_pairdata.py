@@ -123,7 +123,8 @@ if __name__ == '__main__qiaonasen':
 
 
 if __name__ == '__main__':
-    root = '/home/dev_sdc/autops_data/liquid_pairs'
+    # root = '/home/dev_sdc/autops_data/liquid_pairs'
+    root = '/home/dev_sdc/autops_data/opensave_pairs-with_lm'
     apath = 'A'
     bpath = 'B'
     display(root, apath, bpath, _w_size=512)
