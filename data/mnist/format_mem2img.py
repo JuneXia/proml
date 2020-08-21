@@ -7,7 +7,8 @@ from torchvision import datasets
 import torch
 import cv2
 
-save_dir = 'C:\\Users\\Administrator\\res\\mnist\\MNIST_IMG'
+# save_dir = 'C:\\Users\\Administrator\\res\\mnist\\MNIST_IMG'
+save_dir = '/home/tangni/res/mnist/MNIST_IMG'
 
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)

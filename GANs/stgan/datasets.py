@@ -53,6 +53,7 @@ class MnistPairDataset(Dataset):
         self.bpaths = self.bpaths[index].tolist()
 
     def __getitem__(self, index):
+        # index = 0
         apath = self.apaths[index]
         bpath = self.bpaths[index]
         imga = Image.open(apath)

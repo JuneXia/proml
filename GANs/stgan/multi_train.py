@@ -39,7 +39,6 @@ parser.add_argument("--sample_interval", type=int, default=400, help="interval b
 opt = parser.parse_args()
 print(opt)
 
-opt.sample_interval = 1
 opt.batch_size = 128
 grid_size = cfg_net['grid_size']
 
@@ -47,19 +46,17 @@ img_shape = (opt.channels, opt.img_size, opt.img_size)
 
 # cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-cfg_net['device'] = device
 
 # Loss function
 # adversarial_loss = torch.nn.BCELoss()
 criterion_GAN_loss = torch.nn.MSELoss()
-gan_loss_lambda = 2
-grid_regular_loss = losses.GridRegular(grad_lambda=1)
+grid_regular_loss = losses.GridRegular(grad_lambda=2)
 l1_loss = torch.nn.L1Loss()
-l1_loss_lambda = 2
+l1_loss_lambda = 10
 
 # Initialize generator and discriminator
-generator = Generator(in_channels=img_shape[0], out_channels=opt.latent_dim, grid_size=grid_size, cfg=cfg_net)
-generator2 = Generator(in_channels=img_shape[0], out_channels=opt.latent_dim, grid_size=grid_size, cfg=cfg_net)
+generator = Generator(in_channels=img_shape[0], out_channels=opt.latent_dim, grid_size=grid_size)
+generator2 = Generator(in_channels=img_shape[0], out_channels=opt.latent_dim, grid_size=grid_size)
 discriminator = Discriminator(in_channels=img_shape[0])
 
 generator.cuda(device)
@@ -97,8 +94,7 @@ Tensor = torch.FloatTensor
 # ----------
 #  Training
 # ----------
-if __name__ == '__main__':  # N=1时ok
-    discriminator_output = (-1, 1, 4, 4)
+if __name__ == '__main__2':
     for epoch in range(opt.n_epochs):
         for i, data in enumerate(dataloader):
             imagea = data['imagea'].to(device)
@@ -121,9 +117,6 @@ if __name__ == '__main__':  # N=1时ok
             # valid = Variable(Tensor(imagea.size(0), 1).fill_(1.0), requires_grad=False).to(device)
             # fake = Variable(Tensor(imagea.size(0), 1).fill_(0.0), requires_grad=False).to(device)
 
-            valid = Variable(Tensor(imagea.size(0), discriminator_output[1], discriminator_output[2], discriminator_output[3]).fill_(1.0), requires_grad=False).to(device)
-            fake = Variable(Tensor(imagea.size(0), discriminator_output[1], discriminator_output[2], discriminator_output[3]).fill_(0.0), requires_grad=False).to(device)
-
             # Configure input
             real_imgs = Variable(imagea.type(Tensor)).to(device)
 
@@ -137,24 +130,55 @@ if __name__ == '__main__':  # N=1时ok
             # z = Variable(Tensor(np.random.normal(0, 1, (imagea.shape[0], opt.latent_dim)))).to(device)
 
             # Generate a batch of images
-            fakeb, sparse_grid_offset, dense_grid_offset, grid_template_warp = generator(imagea, sparse_grid_base, dense_grid_base)
+            fakeb, sparse_grid_offset = generator(imagea, sparse_grid_base, dense_grid_base)
 
             # Loss measures generator's ability to fool the discriminator
-            # pred_fake = discriminator(imagea, fakeb)
-            pred_fake = discriminator(fakeb, imagea)
+            pred_fake = discriminator(imagea, fakeb)
+            valid = Variable(
+                Tensor(imagea.size(0), pred_fake.shape[1], pred_fake.shape[2], pred_fake.shape[3]).fill_(1.0),
+                requires_grad=False).to(device)
+            fake = Variable(
+                Tensor(imagea.size(0), pred_fake.shape[1], pred_fake.shape[2], pred_fake.shape[3]).fill_(0.0),
+                requires_grad=False).to(device)
             gan_loss = criterion_GAN_loss(pred_fake,
                                           valid)  # 我们希望Generator生成的图片更加逼近真实样本，所以训练Generator时的ground-truth label为1
 
-            grid_loss = grid_regular_loss(dense_grid_offset)  # TODO: 目前发现对sparse_grid约束，几乎不起work，而对dense_grid约束似乎至少还会起点作用
+            grid_loss = grid_regular_loss(sparse_grid_offset)
             pixel_loss = l1_loss(fakeb, imageb) * l1_loss_lambda
 
-            g_loss = gan_loss * gan_loss_lambda + grid_loss + pixel_loss
+            g_loss = gan_loss + grid_loss + pixel_loss
 
             g_loss.backward()  # 求导
             optimizer_G.step()  # 更新参数
 
-            if i % 20 != 0:
-                continue
+            # -------------------------------------
+            imagea = data['imagea'].to(device)
+            imageb = data['imageb'].to(device)
+
+            dense_grid_size = (imagea.shape[2], imagea.shape[3])
+            dense_grid_base = model.init_grid_id(imagea).to(device)
+
+            sparse_grid_base = Variable(Tensor(imagea.size(0), 2, grid_size[0], grid_size[1]).fill_(0.0), requires_grad=False).to(device)
+
+            optimizer_G2.zero_grad()
+            fakeb, sparse_grid_offset = generator2(imagea, sparse_grid_offset.detach(), dense_grid_base)
+            pred_fake = discriminator(imagea, fakeb)
+            valid = Variable(
+                Tensor(imagea.size(0), pred_fake.shape[1], pred_fake.shape[2], pred_fake.shape[3]).fill_(1.0),
+                requires_grad=False).to(device)
+            fake = Variable(
+                Tensor(imagea.size(0), pred_fake.shape[1], pred_fake.shape[2], pred_fake.shape[3]).fill_(0.0),
+                requires_grad=False).to(device)
+            gan_loss = criterion_GAN_loss(pred_fake,
+                                          valid)  # 我们希望Generator生成的图片更加逼近真实样本，所以训练Generator时的ground-truth label为1
+
+            grid_loss = grid_regular_loss(sparse_grid_offset)
+            pixel_loss = l1_loss(fakeb, imageb) * l1_loss_lambda
+
+            g_loss = gan_loss + grid_loss + pixel_loss
+
+            g_loss.backward()  # 求导
+            optimizer_G.step()  # 更新参数
 
             # ---------------------
             #  Train Discriminator
@@ -163,11 +187,9 @@ if __name__ == '__main__':  # N=1时ok
             optimizer_D.zero_grad()  # 梯度清零
 
             # Measure discriminator's ability to classify real from generated samples
-            # real_loss = criterion_GAN_loss(discriminator(imagea, imageb), valid)  # 真实数据的ground-truth label是1
-            real_loss = criterion_GAN_loss(discriminator(imageb, imagea), valid)  # 真实数据的ground-truth label是1
+            real_loss = criterion_GAN_loss(discriminator(imagea, imageb), valid)  # 真实数据的ground-truth label是1
             # fake_loss = criterion_GAN_loss(discriminator(fakeb.detach(), imageb), fake)  # 假数据的ground-truth label是0
-            # fake_loss = criterion_GAN_loss(discriminator(imagea, fakeb.detach()), fake)  # 假数据的ground-truth label是0
-            fake_loss = criterion_GAN_loss(discriminator(fakeb.detach(), imagea), fake)  # 假数据的ground-truth label是0
+            fake_loss = criterion_GAN_loss(discriminator(imagea, fakeb.detach()), fake)  # 假数据的ground-truth label是0
             d_loss = (real_loss + fake_loss) / 2
 
             d_loss.backward()  # 求导
@@ -181,5 +203,7 @@ if __name__ == '__main__':  # N=1时ok
 
             batches_done = epoch * len(dataloader) + i
             if batches_done % opt.sample_interval == 0:
-                sample_img = torch.cat((imagea.data, imageb.data, fakeb.data, grid_template_warp.data), -2)
+                sample_img = torch.cat((imagea.data, imageb.data, fakeb.data), -2)
                 save_image(sample_img.data[:25], "images/%d.png" % batches_done, nrow=10, normalize=True)
+
+
