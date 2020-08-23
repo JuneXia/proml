@@ -69,3 +69,19 @@ class MnistPairDataset(Dataset):
 
     def __len__(self):
         return len(self.apaths)
+
+
+import cv2
+if __name__ == '__main__':
+    grid_size = (5, 5)
+    template = np.ones((28, 28), dtype=np.uint8) * 128
+    interval = 28 // grid_size[0]
+    for i in range(interval + 1):
+        print(i)
+        start_i = i * interval
+        template[start_i:start_i+1, :] = 255
+        template[:, start_i:start_i+1] = 255
+        cv2.imshow('show', template)
+        cv2.waitKey()
+
+    cv2.imwrite('./grid_template_6x6.jpg', template)

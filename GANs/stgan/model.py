@@ -105,8 +105,9 @@ class GeneratorUNet(nn.Module):
         self.grid_size = grid_size
 
         # TODO：grid_template 放在这里创建似乎并不太合适。
-        grid_template = cv2.imread('/home/tangni/res/grid_template.jpg')  # TODO：因为这里处理的mnist读取灰度图
-        grid_template = grid_template - 70
+
+        grid_template = cv2.imread(cfg['grid_template'])  # TODO：因为这里处理的mnist读取灰度图
+        # grid_template = grid_template - 70
         if len(grid_template.shape) >= 3 and in_channels == 1:
             grid_template = cv2.cvtColor(grid_template, cv2.COLOR_BGR2GRAY)
         grid_template = cv2.resize(grid_template, (28, 28), interpolation=cv2.INTER_LINEAR)
@@ -180,7 +181,7 @@ class GeneratorUNet(nn.Module):
 
         sparse_grid_offset = F.adaptive_avg_pool2d(x, output_size=self.grid_size)
 
-        # sparse_grid_offset = sparse_grid_base + sparse_grid_offset
+        sparse_grid_offset = sparse_grid_base + sparse_grid_offset
 
         dense_grid_offset = F.interpolate(sparse_grid_offset, size=(H, W), scale_factor=None, mode='bilinear', align_corners=True)
 
