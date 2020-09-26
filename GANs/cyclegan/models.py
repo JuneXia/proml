@@ -75,7 +75,7 @@ class GeneratorResNet(nn.Module):
         model = []
         # Upsampling
         for _ in range(2):
-            out_features //= 2
+            out_features = 2
             model += [
                 nn.Upsample(scale_factor=2),
                 nn.Conv2d(in_features, out_features, 3, stride=1, padding=1),

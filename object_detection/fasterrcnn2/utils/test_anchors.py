@@ -82,7 +82,7 @@ if __name__ == '__main__':  # 演示如何从整张图片中的所有anchor框�
     # 一副图片经过backbone后得到的是多次下采样后的特征图，anchor框是指在输入图片上的anchor框.
     # 而要想在输入图片上均匀生成等间距的anchor_base，则需要有一个合理的anchor_base间隔，也就是下面即将要计算的feature_stride
     remainder = 1 if image_size[0] % feature_width > 0 else 0
-    feature_stride = image_size[0] // feature_width + remainder
+    feature_stride = image_size[0]  feature_width + remainder
 
 
     # step3: 根据特征图尺寸以及anchor_base生成正张输入图片上的anchors
