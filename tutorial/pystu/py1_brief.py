@@ -134,7 +134,7 @@ if __name__ == '__main__10':
     print('*************************')
 
 
-# 写程
+# 协程
 if __name__ == '__main__':
     matchers = [
         print_matches('python1'),
