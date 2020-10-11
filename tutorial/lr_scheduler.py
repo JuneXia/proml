@@ -188,8 +188,8 @@ if flag:
 
 
 # ------------------------------ 6 lambda ------------------------------
-# flag = 0
-flag = 1
+flag = 0
+# flag = 1
 if flag:
 
     lr_init = 0.1
@@ -224,6 +224,59 @@ if flag:
 
     plt.plot(epoch_list, [i[0] for i in lr_list], label="lambda 1")
     plt.plot(epoch_list, [i[1] for i in lr_list], label="lambda 2")
+    plt.xlabel("Epoch")
+    plt.ylabel("Learning Rate")
+    plt.title("LambdaLR")
+    plt.legend()
+    plt.show()
+
+
+# ------------------------------ 7 lambda ------------------------------
+class LRScheduler(object):
+    def __init__(self, milestones=[], lr_list=[]):
+        super(LRScheduler, self).__init__()
+
+        self.milestones = [30, 60, 90]
+        self.lr_list = [1e-4, 7e-5, 3e-5]
+
+    def update(self, epoch):
+        lr = self.lr_list[-1]
+        for i in range(len(self.milestones)):
+            if epoch < self.milestones[i]:
+                lr = self.lr_list[i]
+                # print('****************************** ', i)
+                break
+
+        return lr
+
+# flag = 0
+flag = 1
+if flag:
+    lr_init = 1
+
+    weights = torch.randn((1,), requires_grad=True)
+    # optimizer = optim.SGD([weights], lr=lr_init)
+    optimizer = optim.Adam([weights], lr=lr_init)
+    lr_sch = LRScheduler()
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_sch.update)
+
+    lr_list, epoch_list = list(), list()
+    for epoch in range(max_epoch):
+        for i in range(iteration):
+
+            # train(...)
+
+            optimizer.step()
+            optimizer.zero_grad()
+
+        scheduler.step()
+
+        lr_list.append(scheduler.get_lr())
+        epoch_list.append(epoch)
+
+        print('epoch:{:5d}, lr:{}'.format(epoch, scheduler.get_lr()))
+
+    plt.plot(epoch_list, [i[0] for i in lr_list], label="lambda 1")
     plt.xlabel("Epoch")
     plt.ylabel("Learning Rate")
     plt.title("LambdaLR")
